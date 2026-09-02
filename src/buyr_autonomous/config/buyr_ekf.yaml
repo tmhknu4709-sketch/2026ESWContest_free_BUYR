@@ -1,0 +1,31 @@
+ekf_filter_node:
+  ros__parameters:
+    use_sim_time: false
+    frequency: 30.0 # 주기를 조금 더 높여 반응성을 개선
+    two_d_mode: true
+    publish_tf: true
+
+    odom_frame: odom
+    base_link_frame: base_footprint
+    world_frame: odom
+
+    # 1. Wheel Encoder: 선속도(X)와 각속도(Z)를 모두 일단 사용해봅니다.
+    odom0: odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  false, false, # Linear X
+                   false, false, true,  # Angular Z (일단 켬)
+                   false, false, false]
+    odom0_relative: false
+
+    # 2. IMU: Angular Z만 사용하되, 방향 확인 필수
+    imu0: /imu/data
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,  # Angular Z
+                  false, false, false]
+    
+    imu0_differential: false
+    imu0_relative: false # 절대값 기준으로 테스트
+    imu0_queue_size: 15

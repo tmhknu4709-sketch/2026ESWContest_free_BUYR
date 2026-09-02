@@ -1,0 +1,286 @@
+<?xml version="1.0"?>
+<robot name="buyr" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <material name="dark_gray"><color rgba="0.2 0.2 0.2 1"/></material>
+  <material name="blue"><color rgba="0 0 1 1"/></material>
+  <material name="red"><color rgba="1 0 0 1"/></material>
+  <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+  <material name="silver"><color rgba="0.75 0.75 0.75 1"/></material>
+
+  <xacro:property name="PI" value="3.1415926535897931"/>
+  
+  <xacro:property name="base_radius" value="0.205"/> 
+  <xacro:property name="base_thick" value="0.02"/>   
+  <xacro:property name="wheel_radius" value="0.0825"/> 
+  <xacro:property name="wheel_width" value="0.082"/>   
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${(m/12)*(3*r*r + h*h)}" ixy="0" ixz="0" iyy="${(m/12)*(3*r*r + h*h)}" iyz="0" izz="${(m/2)*(r*r)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="box_inertia" params="m w d h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${(m/12)*(h*h + d*d)}" ixy="0" ixz="0" iyy="${(m/12)*(w*w + h*h)}" iyz="0" izz="${(m/12)*(w*w + d*d)}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${(2/5)*m*r*r}" ixy="0" ixz="0" iyy="${(2/5)*m*r*r}" iyz="0" izz="${(2/5)*m*r*r}"/>
+    </inertial>
+  </xacro:macro>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.049" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <geometry><cylinder radius="${base_radius}" length="${base_thick}"/></geometry>
+      <material name="dark_gray"/>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="${base_radius}" length="${base_thick}"/></geometry>
+    </collision>
+    <xacro:cylinder_inertia m="4.0" r="${base_radius}" h="${base_thick}"/>
+  </link>
+
+  <xacro:macro name="wheel_assembly" params="prefix reflection">
+    <link name="${prefix}_motor">
+      <visual>
+        <geometry><box size="0.065 0.046 0.091"/></geometry>
+        <material name="black"/>
+      </visual>
+      <xacro:box_inertia m="0.15" w="0.065" d="0.046" h="0.091"/>
+    </link>
+
+    <joint name="${prefix}_motor_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${prefix}_motor"/>
+      <origin xyz="0 ${reflection * 0.18} 0.05" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="blue"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+      </collision>
+      <xacro:cylinder_inertia m="0.2" r="${wheel_radius}" h="${wheel_width}"/>
+    </link>
+
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${prefix}_motor"/>
+      <child link="${prefix}_wheel"/>
+      <origin xyz="0 ${reflection * 0.07} -0.0165" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <gazebo reference="${prefix}_wheel">
+      <mu1 value="1.0"/>
+      <mu2 value="1.0"/>
+      <kp value="1000000.0"/>
+      <kd value="10.0"/>
+      <minDepth>0.001</minDepth>
+      <material>Gazebo/Blue</material>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:wheel_assembly prefix="left" reflection="1"/>
+  <xacro:wheel_assembly prefix="right" reflection="-1"/>
+
+  <xacro:macro name="caster_wheel" params="prefix x_reflect y_reflect">
+    <link name="${prefix}_caster_housing">
+      <visual>
+        <geometry><box size="0.048 0.032 0.02"/></geometry>
+        <material name="silver"/>
+      </visual>
+      <xacro:box_inertia m="0.05" w="0.048" d="0.032" h="0.02"/>
+    </link>
+
+    <joint name="${prefix}_caster_housing_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${prefix}_caster_housing"/>
+      <origin xyz="${x_reflect * 0.15} ${y_reflect * 0.10} -0.02" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}_caster_ball">
+      <visual>
+        <geometry><sphere radius="0.009"/></geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <geometry><sphere radius="0.009"/></geometry>
+      </collision>
+      <xacro:sphere_inertia m="0.05" r="0.009"/>
+    </link>
+
+    <joint name="${prefix}_caster_ball_joint" type="fixed">
+      <parent link="${prefix}_caster_housing"/>
+      <child link="${prefix}_caster_ball"/>
+      <origin xyz="0 0 -0.019" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="${prefix}_caster_ball">
+      <mu1 value="0.01"/>
+      <mu2 value="0.01"/>
+      <kp value="1000000.0"/>
+      <kd value="100.0"/>
+      <material>Gazebo/Black</material>
+    </gazebo>
+  </xacro:macro>
+
+
+  <xacro:include filename="$(find depthai_descriptions)/urdf/include/depthai_macro.urdf.xacro" />      # 이 부분은 나중에 수정해야함
+
+  <xacro:depthai_camera 
+    camera_name="oak" 
+    parent="base_link" 
+    camera_model="OAK-D-LITE" 
+    base_frame="oak-d_frame" 
+    cam_pos_x="0.105" 
+    cam_pos_y="0.0" 
+    cam_pos_z="0.5" 
+    cam_roll="0" 
+    cam_pitch="0" 
+    cam_yaw="0" 
+    simulation="true" />
+
+  <xacro:caster_wheel prefix="front_left"  x_reflect="1"  y_reflect="1" />
+  <xacro:caster_wheel prefix="front_right" x_reflect="1"  y_reflect="-1" />
+  <xacro:caster_wheel prefix="rear_left"   x_reflect="-1" y_reflect="1" />
+  <xacro:caster_wheel prefix="rear_right"  x_reflect="-1" y_reflect="-1" />
+
+  <link name="laser_frame">
+    <visual><geometry><box size="0.05 0.05 0.07"/></geometry><material name="red"/></visual>
+    <xacro:box_inertia m="0.16" w="0.05" d="0.05" h="0.07"/>
+  </link>
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_frame"/>
+    <origin xyz="0.12 0 0.245" rpy="0 0 0"/>
+  </joint>
+
+  <link name="opencr_link">
+    <visual><geometry><box size="0.1 0.1 0.01"/></geometry><material name="blue"/></visual>
+    <xacro:box_inertia m="0.1" w="0.1" d="0.1" h="0.01"/>
+  </link>
+  <joint name="opencr_joint" type="fixed">
+    <parent link="base_link"/><child link="opencr_link"/><origin xyz="0 0 0.015" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo>
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.5</wheel_separation>
+      <wheel_diameter>0.165</wheel_diameter>
+      <max_wheel_torque>10.7</max_wheel_torque>
+      <max_wheel_acceleration>2.0</max_wheel_acceleration>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>false</publish_odom_tf>
+  
+      <publish_wheel_tf>true</publish_wheel_tf>
+      <publish_wheel_joint_state>true</publish_wheel_joint_state>
+  
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="laser_frame">
+    <sensor type="ray" name="urg04lx">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-2.0944</min_angle>
+            <max_angle>2.0944</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.02</min>
+          <max>5.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+      
+      <plugin name="gazebo_ros_ray_sensor" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=scan</remapping> </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>laser_frame</frame_name>
+      </plugin>
+      
+    </sensor>
+  </gazebo>
+  
+  <gazebo reference="opencr_link"> 
+    <sensor name="imu_sensor" type="imu">
+      <plugin name="gazebo_ros_imu_sensor" filename="libgazebo_ros_imu_sensor.so">
+        <ros><remapping>~/out:=imu</remapping></ros>
+      </plugin>
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="gazebo_ros_p3d" filename="libgazebo_ros_p3d.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>odom:=ground_truth</remapping>
+      </ros>
+      <body_name>base_footprint</body_name>
+      <frame_name>world</frame_name>
+      <update_rate>30.0</update_rate>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="oak_rgb_camera_frame">
+    <sensor type="depth" name="oak"> <update_rate>10.0</update_rate>
+      <camera name="rgb">
+        <horizontal_fov>1.274</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.1</near>
+          <far>10.0</far> </clip>
+      </camera>
+      
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>/</namespace>
+          <remapping>image_raw:=/oak/rgb/image_raw</remapping>
+          <remapping>depth/image_raw:=/oak/depth/image_raw</remapping>
+          <remapping>camera_info:=/oak/rgb/camera_info</remapping>
+          <remapping>depth/camera_info:=/oak/depth/camera_info</remapping>
+          <remapping>points:=/oak/points</remapping>
+        </ros>
+        <frame_name>oak_rgb_camera_optical_frame</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+</robot>

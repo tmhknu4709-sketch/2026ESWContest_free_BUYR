@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<robot name="buyr" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="PI" value="3.1415926535897931"/>
+  <xacro:property name="base_thick" value="0.02"/>   
+  <xacro:property name="wheel_radius" value="0.0825"/> 
+  <xacro:property name="wheel_width" value="0.082"/>   
+  <xacro:property name="ground_clearance" value="0.02"/>
+
+  <material name="dark_gray"><color rgba="0.2 0.2 0.2 1"/></material>
+  <material name="blue"><color rgba="0 0 1 1"/></material>
+  <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+  <material name="red"><color rgba="1 0 0 1"/></material>
+  <material name="silver"><color rgba="0.75 0.75 0.75 1"/></material>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.03" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <geometry><cylinder radius="0.205" length="${base_thick}"/></geometry>
+      <material name="dark_gray"/>
+    </visual>
+  </link>
+
+  <xacro:macro name="wheel_assembly" params="prefix reflection">
+    <link name="${prefix}_motor">
+      <visual><geometry><box size="0.065 0.046 0.091"/></geometry><material name="black"/></visual>
+    </link>
+    <joint name="${prefix}_motor_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${prefix}_motor"/>
+      <origin xyz="0 ${reflection * 0.256} 0.0525" rpy="0 0 0"/>
+    </joint>
+    <link name="${prefix}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="${PI/2} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="blue"/>
+      </visual>
+    </link>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="${prefix}_motor"/>
+      <child link="${prefix}_wheel"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel_assembly prefix="left" reflection="1"/>
+  <xacro:wheel_assembly prefix="right" reflection="-1"/>
+
+  <xacro:macro name="caster_wheel" params="prefix x_reflect y_reflect">
+    <link name="${prefix}_caster_ball">
+      <visual><geometry><sphere radius="0.015"/></geometry><material name="black"/></visual>
+    </link>
+    <joint name="${prefix}_caster_ball_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${prefix}_caster_ball"/>
+      <origin xyz="${x_reflect * 0.15} ${y_reflect * 0.10} -0.015" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:caster_wheel prefix="front_left"  x_reflect="1"  y_reflect="1" />
+  <xacro:caster_wheel prefix="front_right" x_reflect="1"  y_reflect="-1" />
+  <xacro:caster_wheel prefix="rear_left"   x_reflect="-1" y_reflect="1" />
+  <xacro:caster_wheel prefix="rear_right"  x_reflect="-1" y_reflect="-1" />
+
+  <link name="imu_link">
+    <visual>
+      <geometry><box size="0.02 0.02 0.01"/></geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.07" rpy="0 0 0"/>
+  </joint>
+
+  <link name="laser"> <visual>
+      <geometry><box size="0.05 0.05 0.07"/></geometry>
+      <material name="silver"/>
+    </visual>
+  </link>
+
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser"/> <origin xyz="0.18 0 0.09" rpy="0 0 0"/>
+  </joint>
+
+</robot>
